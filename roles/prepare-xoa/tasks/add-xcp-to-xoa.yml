@@ -1,9 +1,10 @@
 ---
 - name: Register XO instance
-command: >
-  xo-cli register  --allowUnauthorized https://localhost {{ ui_user }} {{ ui_password }}
-
+  command: >
+    xo-cli register --allowUnauthorized https://localhost {{ ui_user }} {{ ui_password }}
 
 - name: Add server
-command: >
-  xo-cli server.add host=http://{{ xcp-ng.ansible_host }}  username={{ xcp-ng.ansible_user }} password={{ xcp-ng.ansible_password }}
+  command: >
+    xo-cli server.add host=http://{{ hostvars['xcp-ng']['ansible_host'] }} 
+    username={{ hostvars['xcp-ng']['ansible_user'] }} 
+    password={{ hostvars['xcp-ng']['ansible_password'] }}

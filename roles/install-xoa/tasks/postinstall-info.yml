@@ -13,7 +13,7 @@
       VM Started successfully
 
       You can access Xen Orchestra at https://{{ ip }} and via SSH at {{ ip }}.
-      Default credentials for UI: {{ default_ui_user }}/{{ default_ui_pass }}.
+      Default credentials for UI: {{ default_ui_user }}/{{ default_ui_pass }}
       Default credentials for SSH: {{ default_ssh_user }}/{{ default_ssh_pass }}
 
       Remember to change both passwords before putting VM to use!
@@ -40,6 +40,32 @@
     user_home: /home/{{ default_ssh_user }}
     groupname: xen
 
+- name: Configure SSH password and show instructions
+  pause:
+    prompt: |
+      ================================================================================
+      XOA Installation Complete - SSH PASSWORD CHANGE REQUIRED
+      ================================================================================
+
+      Current SSH Access:
+         Command: ssh {{ default_ssh_user }}@{{ ip }}
+         Default password: {{ default_ssh_pass }}
+
+      IMPORTANT - PASSWORD CHANGE REQUIRED:
+      -----------------------------------
+      Please enter the new SSH password you will use:
+      - Minimum 8 characters
+      - Mix of letters, numbers, and special characters
+      
+      This password will be:
+      1. Saved in your inventory file
+      2. Required when you first login via SSH
+      3. Used for all future SSH connections
+
+      Enter your new password now:
+      ================================================================================
+  register: new_password_input
+
 - name: Add host details to inventory file
   blockinfile:
     path: "{{ inventory_file }}"
@@ -48,7 +74,7 @@
           xoa:
             ansible_host: {{ ip }}
             ansible_user: {{ default_ssh_user }}
-            ansible_password: {{ default_ssh_pass }}
+            ansible_password: {{ new_password_input.user_input }}
             user_home: /home/{{ default_ssh_user }}
             ui_user: {{ default_ui_user }}
             ui_password: {{ default_ui_pass }}

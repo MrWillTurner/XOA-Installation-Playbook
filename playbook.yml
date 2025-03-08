@@ -7,7 +7,6 @@
     - role: install-xoa
 
 - hosts: xoa
-  gather_facts: false
   roles:
     - role: add-sshkey
     - role: prepare-xoa

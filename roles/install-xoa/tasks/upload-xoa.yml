@@ -5,15 +5,27 @@
   register: file_status
   delegate_to: localhost
 
-- name: Download XOA image using curl with progress bar
-  command: >
-    curl -L# -o {{ download_dest }} {{ download_url }}
-  delegate_to: localhost
+- name: Download XOA image
+  block:
+    - name: Show download start message
+      debug:
+        msg: "Starting download of XOA image from {{ download_url }}"
+
+    - name: Download XOA image
+      get_url:
+        url: "{{ download_url }}"
+        dest: "{{ download_dest }}"
+      delegate_to: localhost
+
+    - name: Show download completion message
+      debug:
+        msg: "Download completed successfully"
   when: not file_status.stat.exists
 
-- name: Debug file status
+- name: Show file status
   debug:
-    msg: "File exists: {{ file_status.stat.exists }}, Path: {{ file_status.stat.path }}"
+    msg: "XOA image file: {% if file_status.stat.exists %}already exists{% else %}downloaded{% endif %}"
+    verbosity: 1
 
 - name: Upload XOA OVA to XCP-ng
   command: >

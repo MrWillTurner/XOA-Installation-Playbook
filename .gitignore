@@ -19,3 +19,7 @@ vars/main.yaml
 .idea/
 *.swp
 *.swo
+
+# XVA virtual appliance files
+*.xva
+*.xva.gz

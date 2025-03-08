@@ -29,7 +29,7 @@ exit
 
 2. After XOA is installed, for XOA host:
 ```bash
-ssh root@<xoa-ip-address>
+ssh xo@<xoa-ip-address>
 # Accept the fingerprint when prompted
 exit
 ```
