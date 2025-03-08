@@ -1,0 +1,78 @@
+---
+- name: Wait for manual SSH fingerprint acceptance
+  pause:
+    prompt: |
+      ================================================================================
+      MANUAL SSH FINGERPRINT ACCEPTANCE REQUIRED
+      
+      Please follow these steps to accept the SSH fingerprint for {{ ansible_host }}:
+
+      1. Open a new terminal window
+      2. Connect to the host using:
+         ssh {{ ansible_user }}@{{ ansible_host }}
+      
+      3. You will see a message like this:
+         The authenticity of host '...' can't be established.
+         ... key fingerprint is ...
+         Are you sure you want to continue connecting (yes/no/[fingerprint])?
+      
+      4. Type 'yes' to accept the fingerprint
+      5. Once connected, type 'exit' to close the SSH session
+      6. Return to this window and press ENTER to continue
+      
+      NOTE: This step is important for security and subsequent SSH connections
+      ================================================================================
+
+- name: Setup SSH directory and permissions
+  block:
+    - name: Ensure .ssh directory exists with proper permissions
+      raw: |
+        sshpass -p "{{ ansible_password }}" ssh {{ ansible_user }}@{{ ansible_host }} \
+        "mkdir -p {{ user_home }}/.ssh/ && chmod 700 {{ user_home }}/.ssh/"
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+
+    - name: Ensure authorized_keys exists with proper permissions
+      raw: |
+        sshpass -p "{{ ansible_password }}" ssh {{ ansible_user }}@{{ ansible_host }} \
+        "touch {{ user_home }}/.ssh/authorized_keys && chmod 600 {{ user_home }}/.ssh/authorized_keys"
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+
+- name: Add SSH key if not present
+  block:
+    - name: Check if SSH key already exists
+      raw: "grep -q '{{ lookup('file', '~/.ssh/id_rsa.pub') }}' {{ user_home }}/.ssh/authorized_keys"
+      args:
+        executable: /bin/bash
+      register: ssh_key_check
+      ignore_errors: yes
+
+    - name: Add SSH key to authorized_keys
+      raw: |
+        echo '{{ lookup('file', '~/.ssh/id_rsa.pub') }}' >> {{ user_home }}/.ssh/authorized_keys && \
+        chmod 600 {{ user_home }}/.ssh/authorized_keys && \
+        chown -R {{ ansible_user }}:{{ ansible_user }} {{ user_home }}/.ssh
+      args:
+        executable: /bin/bash
+      when: ssh_key_check.rc != 0
+
+- name: Verify SSH key setup
+  block:
+    - name: Test SSH login
+      raw: "ssh {{ ansible_user }}@{{ ansible_host }} echo 'SSH connection successful'"
+      delegate_to: localhost
+      register: ssh_login_test
+      ignore_errors: yes
+
+    - name: Fail if SSH login test fails
+      fail:
+        msg: "SSH login test failed. A password was prompted, or the SSH key setup is incorrect."
+      when: ssh_login_test.rc != 0
+
+    - name: SSH login test succeeded
+      debug:
+        msg: "SSH login test succeeded. The SSH key has been successfully added."
+      when: ssh_login_test.rc == 0

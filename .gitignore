@@ -1,0 +1,21 @@
+# Inventory files
+inventory
+inventory.yml
+inventory.yaml
+
+# Variables files containing sensitive data
+vars/main.yml
+vars/main.yaml
+
+# Ansible retry files
+*.retry
+
+# Local configuration
+*.local.yml
+*.local.yaml
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

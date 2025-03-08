@@ -1,0 +1,34 @@
+---
+- name: Check if XOA image is already downloaded
+  stat:
+    path: "{{ download_dest }}"
+  register: file_status
+  delegate_to: localhost
+
+- name: Download XOA image using curl with progress bar
+  command: >
+    curl -L# -o {{ download_dest }} {{ download_url }}
+  delegate_to: localhost
+  when: not file_status.stat.exists
+
+- name: Debug file status
+  debug:
+    msg: "File exists: {{ file_status.stat.exists }}, Path: {{ file_status.stat.path }}"
+
+- name: Upload XOA OVA to XCP-ng
+  command: >
+    scp {{ download_dest }} {{ ansible_user }}@{{ ansible_host }}:{{ remote_ova_path }}
+  delegate_to: localhost
+
+- name: Import XOA VM
+  raw: cat {{ remote_ova_path }}| zcat | xe vm-import filename=/dev/stdin sr-uuid={{ storage_uuid }}
+  register: vm_import_response
+
+- name: Extract VM UUID
+  ansible.builtin.set_fact:
+    vm_uuid: "{{ vm_import_response.stdout | replace('\r\n', '') }}"
+
+- name: Debug import
+  debug:
+    msg: "Import VM: {{ vm_uuid }} "
+

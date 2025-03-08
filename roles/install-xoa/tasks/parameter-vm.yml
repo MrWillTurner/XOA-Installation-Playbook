@@ -1,0 +1,43 @@
+---
+- name: Create network interface
+  raw: xe vif-create network-uuid="{{ network_uuid }}" vm-uuid="{{ vm_uuid }}" device=0 >/dev/null
+
+- name: Config network interface
+  raw: xe vm-param-set uuid="{{ vm_uuid }}" xenstore-data:vm-data/ip="{{ xoa_ipaddress }}" xenstore-data:vm-data/netmask="{{ xoa_netmask }}" xenstore-data:vm-data/gateway="{{ xoa_gateway }}" xenstore-data:vm-data/dns="{{ xoa_dns }}"
+
+- name: Remove boot options
+  raw: |
+    xe vm-param-remove uuid="{{ vm_uuid }}" param-name=HVM-boot-params param-key=order
+    xe vm-param-set uuid="{{ vm_uuid }}" HVM-boot-params:"order=c"
+
+- name: Start xoa-vm
+  raw: xe vm-start uuid="{{ vm_uuid }}"
+
+- name: Set shell option to ignore errors
+  raw: set +e
+
+- name: Get IP address of the VM
+  raw: xe vm-param-get uuid="{{ vm_uuid }}" param-name=networks param-key=0/ip 2>/dev/null
+  register: ip_output
+  until: ip_output.stdout != ""
+  retries: 10
+  delay: 30
+  ignore_errors: yes
+
+- name: Extract IP address
+  ansible.builtin.set_fact:
+    ip: "{{ ip_output.stdout | replace('\r\n', '') }}"
+
+- name: Display IP address
+  debug:
+    msg: "VM IP address: {{ ip }}"
+  when: ip != ""
+
+- name: Remove network details from xenstore if not using DHCP
+  raw: xe vm-param-remove param-name=xenstore-data param-key=vm-data/{{ item }} uuid="{{ vm_uuid }}" 2>/dev/null
+  loop:
+    - ip
+    - netmask
+    - gateway
+    - dns
+

@@ -1,0 +1,56 @@
+---
+- name: Manage VM Startup
+  ansible.builtin.set_fact:
+    default_ui_user: "admin@admin.net"
+    default_ui_pass: "admin"
+    default_ssh_user: "xo"
+    default_ssh_pass: "xopass"
+    ip: "192.168.1.3"
+
+- name: Print VM started successfully with IP
+  debug:
+    msg: |
+      VM Started successfully
+
+      You can access Xen Orchestra at https://{{ ip }} and via SSH at {{ ip }}.
+      Default credentials for UI: {{ default_ui_user }}/{{ default_ui_pass }}.
+      Default credentials for SSH: {{ default_ssh_user }}/{{ default_ssh_pass }}
+
+      Remember to change both passwords before putting VM to use!
+  when: ip != ""
+
+- name: Print VM started without IP information
+  debug:
+    msg: |
+      VM started but we couldn't fetch its IP address from xentools.
+
+      Check VM status/IP address manually. If VM started correctly, it should have Web UI and SSH accessible at its IP address.
+      Default credentials for UI: {{ default_ui_user }}/{{ default_ui_pass }}
+      Default credentials for SSH: {{ default_ssh_user }}/{{ default_ssh_pass }}
+
+      Remember to change both passwords before putting VM to use!
+  when: ip == ""
+
+- name: Add new instance to host group
+  add_host:
+    hostname: xoa
+    ansible_host: "{{ ip }}"
+    ansible_user: "{{ default_ssh_user }}"
+    ansible_ssh_pass: "{{ default_ssh_pass }}"
+    user_home: /home/{{ default_ssh_user }}
+    groupname: xen
+
+- name: Add host details to inventory file
+  blockinfile:
+    path: "{{ inventory_file }}"
+    insertafter: '^      hosts:'
+    block: |2
+          xoa:
+            ansible_host: {{ ip }}
+            ansible_user: {{ default_ssh_user }}
+            ansible_password: {{ default_ssh_pass }}
+            user_home: /home/{{ default_ssh_user }}
+            ui_user: {{ default_ui_user }}
+            ui_password: {{ default_ui_pass }}
+    state: present
+  delegate_to: localhost

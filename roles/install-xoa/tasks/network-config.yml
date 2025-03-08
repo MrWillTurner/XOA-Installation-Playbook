@@ -1,0 +1,70 @@
+---
+- name: Check if network configuration is defined
+  set_fact:
+    network_config_missing: "{{ not (xoa_ipaddress is defined and xoa_netmask is defined and xoa_gateway is defined) }}"
+
+- name: Interactive network configuration
+  block:
+    - name: Get IP address
+      pause:
+        prompt: |
+          Please enter the IP address for XOA (e.g., 192.168.1.3)
+      register: ip_input
+      when: xoa_ipaddress is not defined
+
+    - name: Set IP address
+      set_fact:
+        xoa_ipaddress: "{{ ip_input.user_input }}"
+      when: xoa_ipaddress is not defined
+
+    - name: Get netmask
+      pause:
+        prompt: |
+          Please enter the netmask (e.g., 255.255.255.0)
+      register: netmask_input
+      when: xoa_netmask is not defined
+
+    - name: Set netmask
+      set_fact:
+        xoa_netmask: "{{ netmask_input.user_input }}"
+      when: xoa_netmask is not defined
+
+    - name: Get gateway
+      pause:
+        prompt: |
+          Please enter the gateway IP (e.g., 192.168.1.1)
+      register: gateway_input
+      when: xoa_gateway is not defined
+
+    - name: Set gateway
+      set_fact:
+        xoa_gateway: "{{ gateway_input.user_input }}"
+      when: xoa_gateway is not defined
+
+    - name: Get DNS server
+      pause:
+        prompt: |
+          Please enter the DNS server IP (press Enter to use gateway as DNS)
+      register: dns_input
+      when: xoa_dns is not defined
+
+    - name: Set DNS server
+      set_fact:
+        xoa_dns: "{{ dns_input.user_input | default(xoa_gateway, true) }}"
+      when: xoa_dns is not defined
+
+    - name: Display network configuration
+      debug:
+        msg: |
+          Network configuration:
+          IP Address: {{ xoa_ipaddress }}
+          Netmask:   {{ xoa_netmask }}
+          Gateway:   {{ xoa_gateway }}
+          DNS:       {{ xoa_dns }}
+
+    - name: Confirm configuration
+      pause:
+        prompt: |
+          Please review the network configuration above.
+          Press ENTER to continue or Ctrl+C to abort
+  when: network_config_missing 

@@ -1,0 +1,32 @@
+---
+- name: Select network
+  raw: xe sr-list content-type=user | grep "uuid\|name-label" | cut -d':' -f2 | sed 's/^ //' | paste - -
+  register: sr_list
+
+- name: Split lines with tabs
+  ansible.builtin.set_fact:
+    storage_split_lines: "{{ sr_list.stdout_lines | map('split', '\t') | list }}"
+
+- name: Check if there is only one storage
+  ansible.builtin.set_fact:
+    storage_uuid: "{{ storage_split_lines[0][0] }}"
+  when: storage_split_lines | length == 1
+
+- name: Prompt user to choose a storage if multiple exist
+  pause:
+    prompt: |
+      Please choose a storage:
+      {% for storage in storage_split_lines %}
+      {{ loop.index0 }} - UUID: {{ storage[0] }}, Description: {{ storage[1] }}
+      {% endfor %}
+  register: user_input
+  when: storage_split_lines | length > 1
+
+- name: Extract selected UUID if multiple storages exist
+  ansible.builtin.set_fact:
+    storage_uuid: "{{ storage_split_lines[user_input.user_input | int][0] }}"
+  when: storage_split_lines | length > 1
+
+- name: Display selected UUID
+  debug:
+    msg: "Storage UUID: {{ storage_uuid }}"

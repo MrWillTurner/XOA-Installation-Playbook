@@ -1,0 +1,7 @@
+---
+- include_tasks: network-config.yml
+- include_tasks: network-interface-select.yml
+- include_tasks: storage-select.yml
+- include_tasks: upload-xoa.yml
+- include_tasks: parameter-vm.yml
+- include_tasks: postinstall-info.yml

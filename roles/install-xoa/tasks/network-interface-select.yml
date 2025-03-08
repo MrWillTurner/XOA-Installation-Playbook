@@ -1,0 +1,50 @@
+---
+- name: Select network interface
+  raw: xe network-list | grep "uuid\|name-label" | cut -d':' -f2 | sed 's/^ //' | paste - -
+  register: network_list
+
+- name: Split lines with tabs
+  ansible.builtin.set_fact:
+    network_split_lines: "{{ network_list.stdout_lines | map('split', '\t') | list }}"
+
+- name: Try to find specified network interface automatically
+  ansible.builtin.set_fact:
+    selected_network: "{{ network_split_lines | selectattr('1', 'search', xoa_network_interface) | list }}"
+
+- name: Set network UUID if interface found
+  ansible.builtin.set_fact:
+    network_uuid: "{{ selected_network[0][0] }}"
+  when: selected_network | length > 0
+
+- name: Manual network interface selection
+  block:
+    - name: Display available network interfaces
+      pause:
+        prompt: |
+          Network interface '{{ xoa_network_interface }}' not found.
+          Please choose a network interface manually: 
+          {% for network in network_split_lines %}
+          {{ loop.index0 }} - UUID: {{ network[0] }}, Interface: {{ network[1] }}
+          {% endfor %}
+      register: user_input
+
+    - name: Validate user input
+      ansible.builtin.assert:
+        that:
+          - user_input.user_input | int >= 0
+          - user_input.user_input | int < network_split_lines | length
+        fail_msg: "Invalid input. Please enter a number between 0 and {{ network_split_lines | length - 1 }}."
+
+    - name: Extract selected UUID from user input
+      ansible.builtin.set_fact:
+        network_uuid: "{{ network_split_lines[user_input.user_input | int][0] }}"
+  when: selected_network | length == 0
+
+- name: Display selected network interface
+  debug:
+    msg: "Selected network interface UUID: {{ network_uuid }}"
+    verbosity: 1
+
+- name: Display selection method
+  debug:
+    msg: "Network interface selected {{ 'automatically (' + xoa_network_interface + ')' if selected_network | length > 0 else 'manually by user' }}" 

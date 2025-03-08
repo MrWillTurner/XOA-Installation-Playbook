@@ -1,0 +1,13 @@
+- hosts: xcp-ng
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  roles:
+    - role: add-sshkey
+    - role: install-xoa
+
+- hosts: xoa
+  gather_facts: false
+  roles:
+    - role: add-sshkey
+    - role: prepare-xoa
