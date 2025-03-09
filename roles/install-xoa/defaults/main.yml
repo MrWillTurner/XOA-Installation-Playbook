@@ -2,10 +2,8 @@
 # Network configuration
 xoa_network_interface: "eth0"
 
-# XOA image configuration
-download_url: "https://xo-image.yawn.fi/downloads/image.xva.gz"
-download_dest: "image.xva.gz"
-remote_ova_path: "image.xva.gz"
+# VM autostart configuration
+xoa_autostart: true  # Set to false to disable automatic start of XOA VM when XCP-ng starts
 
 # Network configuration must be defined in inventory or playbook vars:
 # xoa_ipaddress: "192.168.1.3"     # Required

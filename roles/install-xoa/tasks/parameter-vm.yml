@@ -10,6 +10,9 @@
     xe vm-param-remove uuid="{{ vm_uuid }}" param-name=HVM-boot-params param-key=order
     xe vm-param-set uuid="{{ vm_uuid }}" HVM-boot-params:"order=c"
 
+- name: Configure VM autostart
+  raw: xe vm-param-set uuid="{{ vm_uuid }}" other-config:auto_poweron="{{ xoa_autostart | lower }}"
+
 - name: Start xoa-vm
   raw: xe vm-start uuid="{{ vm_uuid }}"
 

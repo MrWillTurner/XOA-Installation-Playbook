@@ -1,278 +1,170 @@
 # XCP-ng XOA Installation Playbook
 
-This Ansible playbook automates the installation and configuration of Xen Orchestra Appliance (XOA) on XCP-ng servers.
+Ansible playbook for automated installation of Xen Orchestra Appliance (XOA) on XCP-ng servers.
 
 ## Requirements
 
-### Control Node
-- Ansible 2.9 or higher
-- Python 3.x
+- **Control Node:**
+  - Ansible 2.9+
+  - Python 3.x
 
-### XCP-ng Host
-- XCP-ng server with SSH enabled
-- Minimum resources:
+- **XCP-ng Host:**
+  - SSH enabled
   - 2 vCPUs available
   - 4 GB RAM available
   - 10 GB disk space free
-- Network connectivity
+  - Network connectivity
 
-## Pre-Installation Steps
+## Quick Start
 
-Before running the playbook, you need to manually accept the SSH fingerprints:
-
-1. For XCP-ng host:
-```bash
-ssh root@<xcpng-host-ip>
-# Accept the fingerprint when prompted
-exit
-```
-
-2. After XOA is installed, for XOA host:
-```bash
-ssh xo@<xoa-ip-address>
-# Accept the fingerprint when prompted
-exit
-```
-
-These steps are security measures that help verify the authenticity of the remote hosts.
-
-## Playbook Structure
-
-The playbook consists of several roles that handle different aspects of the installation:
-
-### 1. add-sshkey
-Handles SSH key setup between the control node and XCP-ng host.
-- Adds SSH public key to authorized_keys
-- Tests SSH key-based authentication
-
-### 2. install-xoa
-Manages the XOA VM installation on XCP-ng.
-- Network configuration (IP, netmask, gateway, DNS)
-- Network interface selection (automatic or manual)
-- Storage repository selection
-- XOA image upload and VM creation
-- VM configuration (2 vCPUs, 4 GB RAM)
-- Initial VM startup
-
-### 3. prepare-xoa
-Handles post-installation configuration of XOA.
-- Waits for XOA to be fully started
-- Displays post-installation information
-
-## Usage
-
-1. Clone this repository:
+1. Clone and enter repository:
 ```bash
 git clone <repository-url>
 cd <repository-directory>
 ```
 
-2. Create your inventory file:
+2. Create inventory file:
 ```ini
-# Example inventory file structure
 [xcp-ng]
 xcpng-host ansible_host=192.168.1.100 ansible_user=root
-
-[all:vars]
-# Optional: Network configuration (if not provided, will be prompted)
-xoa_ipaddress=192.168.1.3
-xoa_netmask=255.255.255.0
-xoa_gateway=192.168.1.1
-xoa_dns=8.8.8.8
 ```
 
-3. Configure network settings using one of these methods:
-   - Add variables to inventory file (as shown above)
-   - Use command line parameters
-   - Let the playbook prompt for values interactively (default)
-
-4. Run the playbook:
+3. Run playbook:
 ```bash
 ansible-playbook playbook.yml
 ```
 
-## Configuration
+## Installation Process
 
-### SSH Fingerprint Handling
+The playbook performs these steps to configure XOA:
 
-The playbook requires SSH fingerprint acceptance at two stages:
+1. **Network Setup**
+   - Collects network configuration (interactive or from inventory)
+   - Validates network settings
+   - Selects and configures network interface
 
-1. **Pre-Installation (Required)**
-   Before running the playbook, manually accept the XCP-ng host's SSH fingerprint:
-   ```bash
-   ssh root@<xcpng-host-ip>
-   # Accept the fingerprint when prompted
-   exit
-   ```
+2. **Storage Preparation**
+   - Lists available storage repositories
+   - Selects repository with sufficient space (10GB+)
+   - Prepares for VM installation
 
-2. **Post-VM Creation (Required)**
-   After XOA VM is created but before configuration:
-   ```bash
-   ssh root@<xoa-ip-address>
-   # Accept the fingerprint when prompted
-   exit
-   ```
+3. **VM Creation**
+   - Downloads XOA appliance image
+   - Creates VM with required resources
+   - Configures network settings
+   - Sets up autostart preference
 
-These steps are security measures that help verify the authenticity of the remote hosts and cannot be automated for security reasons.
+4. **VM Configuration**
+   - Configures boot parameters
+   - Creates and configures network interface
+   - Sets static IP configuration
+   - Starts the VM
 
-### Network Configuration
+5. **Post Setup**
+   - Verifies VM is running
+   - Retrieves VM IP address
+   - Updates inventory with VM details
+   - Displays access information
 
-The playbook requires network configuration for XOA. You can provide this in several ways:
+6. **XCP-ng Integration**
+   - Registers XOA instance with default credentials
+   - Automatically adds XCP-ng host to XOA
+   - Establishes connection between XOA and XCP-ng
 
-1. **Interactive Setup (Default)**
-If no network configuration is provided, the playbook will interactively prompt for:
-- IP address for XOA
-- Netmask
-- Gateway
-- DNS server (optional, will use gateway if not specified)
+## Configuration Options
 
-The playbook will display the configuration for review before proceeding.
+### Network Settings
 
-2. **Inventory File (Recommended)**
+Configure network in one of these ways:
+
+1. **Interactive (Default)**: Playbook will prompt for:
+   - IP address
+   - Netmask
+   - Gateway
+   - DNS (optional)
+
+2. **Inventory File**:
 ```ini
 [all:vars]
 xoa_ipaddress=192.168.1.3
 xoa_netmask=255.255.255.0
 xoa_gateway=192.168.1.1
-xoa_dns=8.8.8.8
+xoa_dns=8.8.8.8  # Optional, defaults to gateway
 ```
 
-3. **Playbook Variables**
-```yaml
-- hosts: xcp-ng
-  vars:
-    xoa_ipaddress: "192.168.1.3"
-    xoa_netmask: "255.255.255.0"
-    xoa_gateway: "192.168.1.1"
-    xoa_dns: "8.8.8.8"
-  roles:
-    - role: install-xoa
-```
-
-4. **Command Line**
+3. **Command Line**:
 ```bash
 ansible-playbook playbook.yml \
   -e "xoa_ipaddress=192.168.1.3" \
   -e "xoa_netmask=255.255.255.0" \
-  -e "xoa_gateway=192.168.1.1" \
-  -e "xoa_dns=8.8.8.8"
+  -e "xoa_gateway=192.168.1.1"
 ```
 
-### Network Interface Selection
+### Network Interface
 
-The playbook provides flexible network interface configuration:
+Default: `eth0`
 
-1. **Default Behavior**
-   - Automatically looks for 'eth0'
-   - No configuration needed if using eth0
+Change interface in inventory:
+```ini
+[all:vars]
+xoa_network_interface=eth1
+```
 
-2. **Custom Interface**
-   You can specify a different interface in several ways:
+Or via command line:
+```bash
+ansible-playbook playbook.yml -e "xoa_network_interface=eth1"
+```
 
-   a. In inventory file (recommended):
-   ```ini
-   [all:vars]
-   xoa_network_interface=eth1
-   ```
+If specified interface isn't found, playbook will:
+- List available interfaces
+- Allow manual selection
 
-   b. In playbook:
-   ```yaml
-   - hosts: xcp-ng
-     vars:
-       xoa_network_interface: "eth1"
-     roles:
-       - role: install-xoa
-   ```
+### VM Autostart
 
-   c. Command line:
-   ```bash
-   ansible-playbook playbook.yml -e "xoa_network_interface=eth1"
-   ```
+Control whether XOA starts automatically with XCP-ng host.
 
-3. **Automatic Selection**
-   - Searches for specified interface name in XCP-ng network list
-   - Case-sensitive match
-   - Falls back to interactive selection if not found
+Default: Enabled
 
-4. **Interactive Fallback**
-   If the specified interface is not found, the playbook will:
-   - List all available network interfaces
-   - Show interface details (UUID and name)
-   - Allow manual selection
-   - Validate the selection
+Disable in inventory:
+```ini
+[all:vars]
+xoa_autostart=false
+```
 
-5. **Important Notes**
-   - Interface name must match exactly
-   - Case-sensitive matching
-   - Interactive fallback ensures you can always select the correct interface
-   - Selection is validated before proceeding
-
-## Installation Process
-
-1. Network Configuration:
-   - Collect or prompt for network settings
-   - Validate configuration
-
-2. Network Interface Selection:
-   - Automatic detection of specified interface
-   - Interactive selection if automatic fails
-
-3. Storage Selection:
-   - List available storage repositories
-   - Interactive selection of SR
-   - Minimum 10 GB space required
-
-4. XOA Installation:
-   - Upload XOA image
-   - Create VM with fixed resources:
-     - 2 vCPUs
-     - 4 GB RAM
-     - 10 GB minimum disk space
-   - Configure network settings
-   - Initial startup
-
-## Network Requirements
-
-- The selected network interface must:
-  - Exist on the XCP-ng host
-  - Be properly configured and up
-  - Have access to:
-    - XCP-ng management interface
-    - Internet (for XOA updates)
-    - Your management network (for accessing XOA web interface)
-- Static IP configuration required
-- DNS configuration recommended (defaults to gateway if not specified)
+Or via command line:
+```bash
+ansible-playbook playbook.yml -e "xoa_autostart=false"
+```
 
 ## Post-Installation
 
 After successful installation:
-1. XOA will be accessible via its configured IP address
-2. Default credentials will be displayed
-3. You can access the web interface to complete setup
 
-## Notes
+1. Access XOA:
+   - Web UI: `https://<xoa-ip>`
+   - Default credentials: `admin@admin.net`/`admin`
 
-- VM resources are fixed according to XOA requirements
-- Network configuration is required but can be provided interactively
-- Network interface selection supports both automatic and manual modes
-- All configuration can be automated through inventory/playbook variables
+2. Important:
+   - Change web interface password on first login
+   - Configure any additional XOA settings as needed
 
 ## Troubleshooting
 
-If you encounter issues:
-1. Ensure all requirements are met
-2. Check network connectivity
-3. Verify network configuration values
-4. Verify SSH fingerprint acceptance:
-   - Check if you can SSH to XCP-ng host
-   - Check if you can SSH to XOA after creation
-5. Network interface issues:
-   - Verify interface name exists
-   - Check interface is up and configured
-   - Try interactive selection if automatic fails
-6. Verify storage repository has enough free space
-7. Check XOA is accessible after installation
+1. **Network Issues**
+   - Verify network settings
+   - Check interface exists and is up
+   - Ensure connectivity to XCP-ng host
 
-## Contributing
+2. **Storage Issues**
+   - Verify 10 GB minimum space
+   - Check storage repository access
 
-Feel free to submit issues and pull requests to improve the playbook. 
+3. **Access Issues**
+   - Verify XOA IP is reachable
+   - Check web UI is accessible
+   - Confirm credentials are correct
+
+4. **XCP-ng Connection Issues**
+   - Verify XCP-ng host is reachable
+   - Check root credentials or SSH key
+   - Ensure no firewall blocks XOA to XCP-ng communication (ports 80, 443) 
